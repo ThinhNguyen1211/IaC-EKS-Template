@@ -1,0 +1,324 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation Template - Create Two VPCs (First and Second) without Security Groups or EC2 Instances. All CIDRs entered manually by user.'
+
+Parameters:
+  # ================= First VPC Parameters =================
+  FirstEnvironmentName:
+    Type: String
+    Description: Name of the first VPC
+  FirstVpcCIDR:
+    Type: String
+    Description: CIDR block for the first VPC
+  FirstPublicSubnet1CIDR:
+    Type: String
+    Description: CIDR block for Public Subnet 1 of the first VPC
+  FirstPublicSubnet2CIDR:
+    Type: String
+    Description: CIDR block for Public Subnet 2 of the first VPC
+  FirstPrivateSubnet1CIDR:
+    Type: String
+    Description: CIDR block for Private Subnet 1 of the first VPC
+  FirstPrivateSubnet2CIDR:
+    Type: String
+    Description: CIDR block for Private Subnet 2 of the first VPC
+
+  # ================= Second VPC Parameters =================
+  SecondEnvironmentName:
+    Type: String
+    Description: Name of the second VPC
+  SecondVpcCIDR:
+    Type: String
+    Description: CIDR block for the second VPC
+  SecondPublicSubnet1CIDR:
+    Type: String
+    Description: CIDR block for Public Subnet 1 of the second VPC
+  SecondPublicSubnet2CIDR:
+    Type: String
+    Description: CIDR block for Public Subnet 2 of the second VPC
+  SecondPrivateSubnet1CIDR:
+    Type: String
+    Description: CIDR block for Private Subnet 1 of the second VPC
+  SecondPrivateSubnet2CIDR:
+    Type: String
+    Description: CIDR block for Private Subnet 2 of the second VPC
+
+Resources:
+  # ================= First VPC =================
+  FirstVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref FirstVpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref FirstEnvironmentName
+
+  FirstInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-IGW'
+
+  FirstVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref FirstInternetGateway
+      VpcId: !Ref FirstVPC
+
+  FirstPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FirstVPC
+      CidrBlock: !Ref FirstPublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Public-Subnet-1'
+
+  FirstPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FirstVPC
+      CidrBlock: !Ref FirstPublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Public-Subnet-2'
+
+  FirstPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FirstVPC
+      CidrBlock: !Ref FirstPrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Private-Subnet-1'
+
+  FirstPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FirstVPC
+      CidrBlock: !Ref FirstPrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Private-Subnet-2'
+
+  FirstEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  FirstNATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt FirstEIP.AllocationId
+      SubnetId: !Ref FirstPublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-NATGW'
+
+  FirstPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FirstVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Public-RT'
+
+  FirstPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: FirstVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref FirstPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref FirstInternetGateway
+
+  FirstPublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirstPublicSubnet1
+      RouteTableId: !Ref FirstPublicRouteTable
+
+  FirstPublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirstPublicSubnet2
+      RouteTableId: !Ref FirstPublicRouteTable
+
+  FirstPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FirstVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${FirstEnvironmentName}-Private-RT'
+
+  FirstPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref FirstPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref FirstNATGateway
+
+  FirstPrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirstPrivateSubnet1
+      RouteTableId: !Ref FirstPrivateRouteTable
+
+  FirstPrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FirstPrivateSubnet2
+      RouteTableId: !Ref FirstPrivateRouteTable
+
+  # ================= Second VPC =================
+  SecondVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref SecondVpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref SecondEnvironmentName
+
+  SecondInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-IGW'
+
+  SecondVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref SecondInternetGateway
+      VpcId: !Ref SecondVPC
+
+  SecondPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SecondVPC
+      CidrBlock: !Ref SecondPublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Public-Subnet-1'
+
+  SecondPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SecondVPC
+      CidrBlock: !Ref SecondPublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Public-Subnet-2'
+
+  SecondPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SecondVPC
+      CidrBlock: !Ref SecondPrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Private-Subnet-1'
+
+  SecondPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SecondVPC
+      CidrBlock: !Ref SecondPrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Private-Subnet-2'
+
+  SecondEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  SecondNATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt SecondEIP.AllocationId
+      SubnetId: !Ref SecondPublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-NATGW'
+
+  SecondPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SecondVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Public-RT'
+
+  SecondPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: SecondVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref SecondPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref SecondInternetGateway
+
+  SecondPublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SecondPublicSubnet1
+      RouteTableId: !Ref SecondPublicRouteTable
+
+  SecondPublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SecondPublicSubnet2
+      RouteTableId: !Ref SecondPublicRouteTable
+
+  SecondPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SecondVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${SecondEnvironmentName}-Private-RT'
+
+  SecondPrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref SecondPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref SecondNATGateway
+
+  SecondPrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SecondPrivateSubnet1
+      RouteTableId: !Ref SecondPrivateRouteTable
+
+  SecondPrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SecondPrivateSubnet2
+      RouteTableId: !Ref SecondPrivateRouteTable
+
+Outputs:
+  FirstVPCID:
+    Description: ID of the first VPC
+    Value: !Ref FirstVPC
+  SecondVPCID:
+    Description: ID of the second VPC
+    Value: !Ref SecondVPC
+  FirstPublicSubnets:
+    Description: Public Subnets in the first VPC
+    Value: !Join [',', [!Ref FirstPublicSubnet1, !Ref FirstPublicSubnet2]]
+  SecondPublicSubnets:
+    Description: Public Subnets in the second VPC
+    Value: !Join [',', [!Ref SecondPublicSubnet1, !Ref SecondPublicSubnet2]]
