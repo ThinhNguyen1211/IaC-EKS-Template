@@ -88,7 +88,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     default = {
-      instance_types           = ["t3.medium"]
+      instance_types           = ["m5a.large"]
       force_update_version     = true
       release_version          = var.ami_release_version
       use_name_prefix          = false
