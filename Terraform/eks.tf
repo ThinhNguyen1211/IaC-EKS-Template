@@ -1,4 +1,3 @@
-# Lấy thông tin Region hiện tại để dùng cho lệnh update-kubeconfig
 data "aws_region" "current" {}
 
 module "eks" {
@@ -9,10 +8,8 @@ module "eks" {
   cluster_version                = var.cluster_version
   cluster_endpoint_public_access = true
 
-  # Cấp quyền Admin để bạn có thể view được Cluster trên AWS Console và Terminal
   enable_cluster_creator_admin_permissions = true
 
-  # Cấu hình Add-ons đầy đủ (VPC-CNI, CoreDNS, Kube-proxy)
   cluster_addons = {
     vpc-cni = {
       before_compute = true
@@ -40,7 +37,6 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  # Cấu hình Node Group (Dùng m5.large như bạn yêu cầu)
   eks_managed_node_groups = {
     default = {
       instance_types = ["m5.large"]
@@ -71,13 +67,10 @@ module "eks" {
   })
 }
 
-# --- TÍNH NĂNG MỚI: TỰ ĐỘNG UPDATE KUBECONFIG ---
 resource "null_resource" "update_kubeconfig" {
-  # Chỉ chạy lệnh này sau khi Cluster đã tạo xong hoàn toàn
   depends_on = [module.eks]
 
   provisioner "local-exec" {
-    # Lệnh shell tự động chạy trên máy của bạn
     command = "aws eks update-kubeconfig --name ${var.cluster_name} --region ${data.aws_region.current.name}"
   }
 }
