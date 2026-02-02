@@ -4,8 +4,9 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  cluster_name                   = var.cluster_name
-  cluster_version                = var.cluster_version
+  name            = var.cluster_name
+  version         = var.cluster_version
+  
   cluster_endpoint_public_access = true
 
   enable_cluster_creator_admin_permissions = true
@@ -45,7 +46,7 @@ module "eks" {
       max_size     = 6
       desired_size = 3
 
-      release_version      = var.ami_release_version
+      ami_release_version  = var.ami_release_version
       force_update_version = true
       
       update_config = {
