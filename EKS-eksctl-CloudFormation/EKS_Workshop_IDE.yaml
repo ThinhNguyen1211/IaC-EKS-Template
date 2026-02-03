@@ -427,6 +427,7 @@ Resources:
           - Effect: Allow
             Action:
               - cloudformation:DeleteStack
+              - cloudformation:UpdateTerminationProtection
             Resource:
               - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/eksctl-eks-workshop*
             Condition:
